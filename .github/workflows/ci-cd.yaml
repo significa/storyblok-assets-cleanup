@@ -1,0 +1,21 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types:
+      - published
+  workflow_dispatch:
+  repository_dispatch:
+
+jobs:
+  test-and-publish:
+    name: Test and publish
+    uses: significa/actions/.github/workflows/python-package.yaml@main
+    secrets:
+      TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
