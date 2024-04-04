@@ -369,7 +369,7 @@ def _main():
     print()
 
     if should_delete_images:
-        should_delete_images = input('Do you really want to delete the assets? (y/n): ') != 'y'
+        should_delete_images = input('Do you really want to delete the assets? (y/n): ') == 'y'
     elif backup_assets:
         input('Images will not be deleted but will perform backup. Press any key to continue: ')
     else:
