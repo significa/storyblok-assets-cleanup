@@ -133,7 +133,6 @@ def get_all_paginated(path, item_name, params={}):
 
 def is_asset_in_use(asset):
     file_path = asset['filename'].split('.storyblok.com', 1)[1]
-    print(file_path)
     response = request(
         'GET',
         '/stories',
@@ -148,7 +147,6 @@ def is_asset_in_use(asset):
     response.raise_for_status()
 
     stories = response.json()['stories']
-    print(stories)
     return len(stories) != 0
 
 
