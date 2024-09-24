@@ -11,14 +11,29 @@ import requests
 _storyblok_space_id = None
 _storyblok_personal_access_token = None
 
+# Define a mapping of regions to base URLs
+REGION_BASE_URLS = {
+    'eu': 'https://mapi.storyblok.com',
+    'us': 'https://api-us.storyblok.com',
+    'ca': 'https://api-ca.storyblok.com',
+    'australia': 'https://api-ap.storyblok.com',
+    'china': 'https://app.storyblokchina.cn'
+}
 
-def init_storyblok_client(space_id, token):
+# Define a default region (EU)
+DEFAULT_REGION = 'eu'
+
+
+def init_storyblok_client(space_id, token,region):
     # TODO: make this cleaner without changing too much code
     global _storyblok_space_id
     global _storyblok_personal_access_token
+    global _storyblok_base_url
 
     _storyblok_space_id = space_id
     _storyblok_personal_access_token = token
+    _storyblok_base_url = REGION_BASE_URLS[region]
+
 
 
 def request(method, path, params=None, **kwargs):
@@ -26,7 +41,7 @@ def request(method, path, params=None, **kwargs):
 
     return requests.request(
         method,
-        f'{BASE_URL}/v1/spaces/{_storyblok_space_id}{path}',
+        f'{_storyblok_base_url}/v1/spaces/{_storyblok_space_id}{path}',
         headers={
             'Authorization': _storyblok_personal_access_token,
         },
@@ -117,8 +132,8 @@ def get_all_paginated(path, item_name, params={}):
 
 
 def is_asset_in_use(asset):
-    file_path = asset['filename'].replace('https://s3.amazonaws.com/a.storyblok.com', '')
-
+    file_path = asset['filename'].split('.storyblok.com', 1)[1]
+    print(file_path)
     response = request(
         'GET',
         '/stories',
@@ -128,11 +143,12 @@ def is_asset_in_use(asset):
             'page': 1,
         }
     )
+    
 
     response.raise_for_status()
 
     stories = response.json()['stories']
-
+    print(stories)
     return len(stories) != 0
 
 
@@ -192,6 +208,13 @@ def _main():
         ),
     )
     parser.add_argument(
+      '--region',
+      type=str,
+      default=DEFAULT_REGION,
+      choices=list(REGION_BASE_URLS.keys()),
+      help='Storyblok region (default: EU)'
+  )
+    parser.add_argument(
         '--blacklisted-folder-paths',
         type=str,
         default=getenv('BLACKLISTED_ASSET_FOLDER_PATHS', ''),
@@ -227,7 +250,7 @@ def _main():
 
     args = parser.parse_args()
 
-    init_storyblok_client(args.space_id, args.token)
+    init_storyblok_client(args.space_id, args.token,args.region)
     should_delete_images = args.delete
     use_cache = args.cache
     backup_assets = args.backup
@@ -281,7 +304,7 @@ def _main():
             print(f'Skipping {id} as it is in {asset_path_name}')
             return False
 
-        if any(word in filename for word in blacklisted_asset_filename_words):
+        if any(word in filename for word in blacklisted_asset_filename_words if word):
             print(f'Skipping {id} as it contains blacklisted words')
             return False
 
@@ -291,6 +314,7 @@ def _main():
 
     count = 0
     for asset in all_assets:
+        
         if 'is_in_use' in asset:
             continue
 
