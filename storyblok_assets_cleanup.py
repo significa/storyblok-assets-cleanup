@@ -8,46 +8,44 @@ from os import getenv, makedirs, path
 
 import requests
 
-_storyblok_space_id = None
-_storyblok_personal_access_token = None
 
-# Define a mapping of regions to base URLs
-REGION_BASE_URLS = {
-    'eu': 'https://mapi.storyblok.com',
-    'us': 'https://api-us.storyblok.com',
-    'ca': 'https://api-ca.storyblok.com',
-    'australia': 'https://api-ap.storyblok.com',
-    'china': 'https://app.storyblokchina.cn'
-}
+class StoryblokClient:
+    """
+    Class that handles the storyblok client credentials as a global state.
+    Useful in this script context but careful to not re-use (or import) this where the global state matters.
+    """
 
-# Define a default region (EU)
-DEFAULT_REGION = 'eu'
+    _storyblok_space_id: str
+    _storyblok_personal_access_token: str
+    _storyblok_base_url: str
 
+    REGION_TO_BASE_URLS = {
+        'eu': 'https://mapi.storyblok.com',
+        'us': 'https://api-us.storyblok.com',
+        'ca': 'https://api-ca.storyblok.com',
+        'au': 'https://api-ap.storyblok.com',
+        'cn': 'https://app.storyblokchina.cn'
+    }
 
-def init_storyblok_client(space_id, token,region):
-    # TODO: make this cleaner without changing too much code
-    global _storyblok_space_id
-    global _storyblok_personal_access_token
-    global _storyblok_base_url
+    DEFAULT_REGION = 'eu'
 
-    _storyblok_space_id = space_id
-    _storyblok_personal_access_token = token
-    _storyblok_base_url = REGION_BASE_URLS[region]
+    @classmethod
+    def init_client(cls, space_id, token, region):
+        cls.storyblok_space_id = space_id
+        cls.storyblok_personal_access_token = token
+        cls.storyblok_base_url = cls.REGION_TO_BASE_URLS[region]
 
-
-
-def request(method, path, params=None, **kwargs):
-    BASE_URL = 'https://mapi.storyblok.com'
-
-    return requests.request(
-        method,
-        f'{_storyblok_base_url}/v1/spaces/{_storyblok_space_id}{path}',
-        headers={
-            'Authorization': _storyblok_personal_access_token,
-        },
-        params=params,
-        **kwargs,
-    )
+    @classmethod
+    def request(cls, method, path, params=None, **kwargs):
+        return requests.request(
+            method,
+            f'{cls.storyblok_base_url}/v1/spaces/{cls.storyblok_space_id}{path}',
+            headers={
+                'Authorization': cls.storyblok_personal_access_token,
+            },
+            params=params,
+            **kwargs,
+        )
 
 
 def ensure_cache_dir_exists(cache_directory):
@@ -74,7 +72,7 @@ def save_json(file_path, data):
 def download_asset(asset_url, target_file_path, continue_download_on_failure):
     print(f'Downloading asset {asset_url!r} into {target_file_path!r}')
 
-    response = request('GET', asset_url, stream=True)
+    response = StoryblokClient.request('GET', asset_url, stream=True)
 
     if not response.ok:
         msg = f'Cannot download asset {asset_url}, got status code {response.status_code}'
@@ -105,7 +103,7 @@ def get_all_paginated(path, item_name, params={}):
             'page': page,
         }
 
-        response = request(
+        response = StoryblokClient.request(
             'GET',
             path,
             params=params
@@ -133,7 +131,7 @@ def get_all_paginated(path, item_name, params={}):
 
 def is_asset_in_use(asset):
     file_path = asset['filename'].split('.storyblok.com', 1)[1]
-    response = request(
+    response = StoryblokClient.request(
         'GET',
         '/stories',
         params={
@@ -142,7 +140,6 @@ def is_asset_in_use(asset):
             'page': 1,
         }
     )
-    
 
     response.raise_for_status()
 
@@ -206,12 +203,12 @@ def _main():
         ),
     )
     parser.add_argument(
-      '--region',
-      type=str,
-      default=DEFAULT_REGION,
-      choices=list(REGION_BASE_URLS.keys()),
-      help='Storyblok region (default: EU)'
-  )
+        '--region',
+        type=str,
+        default=StoryblokClient.DEFAULT_REGION,
+        choices=list(StoryblokClient.REGION_TO_BASE_URLS.keys()),
+        help='Storyblok region (default: EU)'
+    )
     parser.add_argument(
         '--blacklisted-folder-paths',
         type=str,
@@ -248,7 +245,8 @@ def _main():
 
     args = parser.parse_args()
 
-    init_storyblok_client(args.space_id, args.token,args.region)
+    StoryblokClient.init_client(args.space_id, args.token, args.region)
+
     should_delete_images = args.delete
     use_cache = args.cache
     backup_assets = args.backup
@@ -312,7 +310,6 @@ def _main():
 
     count = 0
     for asset in all_assets:
-        
         if 'is_in_use' in asset:
             continue
 
@@ -422,7 +419,7 @@ def _main():
         if should_delete_images:
             print(f'Deleting asset {id}')
 
-            response = request(
+            response = StoryblokClient.request(
                 'DELETE',
                 f'/assets/{id}',
             )
