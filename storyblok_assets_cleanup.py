@@ -12,7 +12,8 @@ import requests
 class StoryblokClient:
     """
     Class that handles the storyblok client credentials as a global state.
-    Useful in this script context but careful to not re-use (or import) this where the global state matters.
+    Useful in this script context but careful to not re-use (or import)
+     this where the global state might affect your application.
     """
 
     _storyblok_space_id: str
@@ -31,6 +32,13 @@ class StoryblokClient:
 
     @classmethod
     def init_client(cls, space_id, token, region):
+        if (
+            cls._storyblok_space_id
+            or cls._storyblok_personal_access_token
+            or cls._storyblok_base_url
+        ):
+            raise RuntimeError("StoryblokClient already initialized")
+
         cls.storyblok_space_id = space_id
         cls.storyblok_personal_access_token = token
         cls.storyblok_base_url = cls.REGION_TO_BASE_URLS[region]
