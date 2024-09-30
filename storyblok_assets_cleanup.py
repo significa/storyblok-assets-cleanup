@@ -8,31 +8,52 @@ from os import getenv, makedirs, path
 
 import requests
 
-_storyblok_space_id = None
-_storyblok_personal_access_token = None
 
+class StoryblokClient:
+    """
+    Class that handles the storyblok client credentials as a global state.
+    Useful in this script context but careful to not re-use (or import)
+     this where the global state might affect your application.
+    """
 
-def init_storyblok_client(space_id, token):
-    # TODO: make this cleaner without changing too much code
-    global _storyblok_space_id
-    global _storyblok_personal_access_token
+    _storyblok_space_id: str
+    _storyblok_personal_access_token: str
+    _storyblok_base_url: str
 
-    _storyblok_space_id = space_id
-    _storyblok_personal_access_token = token
+    REGION_TO_BASE_URLS = {
+        'eu': 'https://mapi.storyblok.com',
+        'us': 'https://api-us.storyblok.com',
+        'ca': 'https://api-ca.storyblok.com',
+        'au': 'https://api-ap.storyblok.com',
+        'cn': 'https://app.storyblokchina.cn'
+    }
 
+    DEFAULT_REGION = 'eu'
 
-def request(method, path, params=None, **kwargs):
-    BASE_URL = 'https://mapi.storyblok.com'
+    @classmethod
+    def init_client(cls, space_id, token, region):
+        if (
+            cls._storyblok_space_id
+            or cls._storyblok_personal_access_token
+            or cls._storyblok_base_url
+        ):
+            raise RuntimeError("StoryblokClient already initialized")
 
-    return requests.request(
-        method,
-        f'{BASE_URL}/v1/spaces/{_storyblok_space_id}{path}',
-        headers={
-            'Authorization': _storyblok_personal_access_token,
-        },
-        params=params,
-        **kwargs,
-    )
+        cls.storyblok_space_id = space_id
+        cls.storyblok_personal_access_token = token
+        cls.storyblok_base_url = cls.REGION_TO_BASE_URLS[region]
+
+    @classmethod
+    def request(cls, method, path, params=None, **kwargs):
+        return requests.request(
+            method,
+            f'{cls.storyblok_base_url}/v1/spaces/{cls.storyblok_space_id}{path}',
+            headers={
+                'Authorization': cls.storyblok_personal_access_token,
+            },
+            params=params,
+            **kwargs,
+        )
 
 
 def ensure_cache_dir_exists(cache_directory):
@@ -59,7 +80,7 @@ def save_json(file_path, data):
 def download_asset(asset_url, target_file_path, continue_download_on_failure):
     print(f'Downloading asset {asset_url!r} into {target_file_path!r}')
 
-    response = request('GET', asset_url, stream=True)
+    response = StoryblokClient.request('GET', asset_url, stream=True)
 
     if not response.ok:
         msg = f'Cannot download asset {asset_url}, got status code {response.status_code}'
@@ -90,7 +111,7 @@ def get_all_paginated(path, item_name, params={}):
             'page': page,
         }
 
-        response = request(
+        response = StoryblokClient.request(
             'GET',
             path,
             params=params
@@ -117,9 +138,8 @@ def get_all_paginated(path, item_name, params={}):
 
 
 def is_asset_in_use(asset):
-    file_path = asset['filename'].replace('https://s3.amazonaws.com/a.storyblok.com', '')
-
-    response = request(
+    file_path = asset['filename'].split('.storyblok.com', 1)[1]
+    response = StoryblokClient.request(
         'GET',
         '/stories',
         params={
@@ -132,7 +152,6 @@ def is_asset_in_use(asset):
     response.raise_for_status()
 
     stories = response.json()['stories']
-
     return len(stories) != 0
 
 
@@ -141,6 +160,32 @@ def _main():
         description='storyblok-assets-cleanup an utility to delete unused assets.'
     )
 
+    parser.add_argument(
+        '--token',
+        type=str,
+        default=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN'),
+        required=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN') is None,
+        help=(
+            'Storyblok personal access token, '
+            'alternatively use the env var STORYBLOK_PERSONAL_ACCESS_TOKEN.'
+        ),
+    )
+    parser.add_argument(
+        '--space-id',
+        type=str,
+        default=getenv('STORYBLOK_SPACE_ID'),
+        required=getenv('STORYBLOK_SPACE_ID') is None,
+        help=(
+            'Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID.'
+        ),
+    )
+    parser.add_argument(
+        '--region',
+        type=str,
+        default=StoryblokClient.DEFAULT_REGION,
+        choices=list(StoryblokClient.REGION_TO_BASE_URLS.keys()),
+        help='Storyblok region (default: EU)'
+    )
     parser.add_argument(
         '--delete',
         action=argparse.BooleanOptionalAction,
@@ -153,7 +198,16 @@ def _main():
         action=argparse.BooleanOptionalAction,
         type=bool,
         default=True,
-        help='If we should backup assets (to ./assets_backup/<SPACE_ID>), defaults to true.',
+        help=(
+            'If we should backup assets (to the directory specified in `--backup-directory`), '
+            'defaults to true.'
+        ),
+    )
+    parser.add_argument(
+        '--backup-directory',
+        type=str,
+        default='assets_backup',
+        help='Backup directory, defaults to ./assets_backup.',
     )
     parser.add_argument(
         '--cache',
@@ -165,31 +219,17 @@ def _main():
         ),
     )
     parser.add_argument(
+        '--cache-directory',
+        type=str,
+        default='cache',
+        help='Cache directory, defaults to ./cache.',
+    )
+    parser.add_argument(
         '--continue-download-on-failure',
         action=argparse.BooleanOptionalAction,
         type=bool,
         default=True,
         help='If we should continue if the download of an asset fails. Defaults to true.',
-    )
-
-    parser.add_argument(
-        '--space-id',
-        type=str,
-        default=getenv('STORYBLOK_SPACE_ID'),
-        required=getenv('STORYBLOK_SPACE_ID') is None,
-        help=(
-            'Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID.'
-        ),
-    )
-    parser.add_argument(
-        '--token',
-        type=str,
-        default=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN'),
-        required=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN') is None,
-        help=(
-            'Storyblok personal access token, '
-            'alternatively use the env var STORYBLOK_PERSONAL_ACCESS_TOKEN.'
-        ),
     )
     parser.add_argument(
         '--blacklisted-folder-paths',
@@ -212,22 +252,11 @@ def _main():
             'Default to none/empty list.'
         ),
     )
-    parser.add_argument(
-        '--cache-directory',
-        type=str,
-        default='cache',
-        help='Cache directory, defaults to ./cache.',
-    )
-    parser.add_argument(
-        '--backup-directory',
-        type=str,
-        default='assets_backup',
-        help='Backup directory, defaults to ./assets_backup.',
-    )
 
     args = parser.parse_args()
 
-    init_storyblok_client(args.space_id, args.token)
+    StoryblokClient.init_client(args.space_id, args.token, args.region)
+
     should_delete_images = args.delete
     use_cache = args.cache
     backup_assets = args.backup
@@ -281,7 +310,7 @@ def _main():
             print(f'Skipping {id} as it is in {asset_path_name}')
             return False
 
-        if any(word in filename for word in blacklisted_asset_filename_words):
+        if any(word in filename for word in blacklisted_asset_filename_words if word):
             print(f'Skipping {id} as it contains blacklisted words')
             return False
 
@@ -400,7 +429,7 @@ def _main():
         if should_delete_images:
             print(f'Deleting asset {id}')
 
-            response = request(
+            response = StoryblokClient.request(
                 'DELETE',
                 f'/assets/{id}',
             )

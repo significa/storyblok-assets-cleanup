@@ -27,52 +27,51 @@ Features:
 
 ## Usage
 
+<!--
+  To update the code block with the usage below:
+  
+  1. Resize your terminal to 100 columns. On most systems just run: `stty cols 100 rows 50`.
+  2. Run `storyblok-assets-cleanup --help` to get the usage output.
+-->
+
 ```
-usage: storyblok-assets-cleanup [-h] [--delete | --no-delete] [--backup | --no-backup]
-                                [--cache | --no-cache]
+usage: storyblok-assets-cleanup [-h] [--token TOKEN] --space-id SPACE_ID
+                                [--region {eu,us,ca,au,cn}] [--delete | --no-delete]
+                                [--backup | --no-backup] [--backup-directory BACKUP_DIRECTORY]
+                                [--cache | --no-cache] [--cache-directory CACHE_DIRECTORY]
                                 [--continue-download-on-failure | --no-continue-download-on-failure]
-                                [--space-id SPACE_ID] [--token TOKEN]
                                 [--blacklisted-folder-paths BLACKLISTED_FOLDER_PATHS]
                                 [--blacklisted-words BLACKLISTED_WORDS]
-                                [--cache-directory CACHE_DIRECTORY]
-                                [--backup-directory BACKUP_DIRECTORY]
 
 storyblok-assets-cleanup an utility to delete unused assets.
 
 options:
   -h, --help            show this help message and exit
-
-  --delete, --no-delete
-                        If we should delete assets, default to false.
-
-  --backup, --no-backup
-                        If we should backup assets (to ./assets_backup/<SPACE_ID>), defaults to
-                        true.
-
-  --cache, --no-cache   If we should use cache the assets index. Defaults to True (recommended).
-
-  --continue-download-on-failure, --no-continue-download-on-failure
-                        If we should continue if the download of an asset fails. Defaults to true.
-
-  --space-id SPACE_ID   Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID.
-
   --token TOKEN         Storyblok personal access token, alternatively use the env var
                         STORYBLOK_PERSONAL_ACCESS_TOKEN.
-
-  --blacklisted-folder-paths BLACKLISTED_FOLDER_PATHS
-                        Comma separated list of filepaths that should be ignored. Alternatively use
-                        the env var BLACKLISTED_ASSET_FOLDER_PATHS. Default to none/empty list.
-
-  --blacklisted-words BLACKLISTED_WORDS
-                        Comma separated list of words that should be used to ignore assets when they
-                        are contained in its filename. Alternatively use the env var
-                        BLACKLISTED_ASSET_FILENAME_WORDS. Default to none/empty list.
-
-  --cache-directory CACHE_DIRECTORY
-                        Cache directory, defaults to ./cache.
-
+  --space-id SPACE_ID   Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID.
+  --region {eu,us,ca,au,cn}
+                        Storyblok region (default: EU)
+  --delete, --no-delete
+                        If we should delete assets, default to false.
+  --backup, --no-backup
+                        If we should backup assets (to the directory specified in `--backup-
+                        directory`), defaults to true.
   --backup-directory BACKUP_DIRECTORY
                         Backup directory, defaults to ./assets_backup.
+  --cache, --no-cache   If we should use cache the assets index. Defaults to True (recommended).
+  --cache-directory CACHE_DIRECTORY
+                        Cache directory, defaults to ./cache.
+  --continue-download-on-failure, --no-continue-download-on-failure
+                        If we should continue if the download of an asset fails. Defaults to true.
+  --blacklisted-folder-paths BLACKLISTED_FOLDER_PATHS
+                        Comma separated list of filepaths that should be ignored. Alternatively
+                        use the env var BLACKLISTED_ASSET_FOLDER_PATHS. Default to none/empty
+                        list.
+  --blacklisted-words BLACKLISTED_WORDS
+                        Comma separated list of words that should be used to ignore assets when
+                        they are contained in its filename. Alternatively use the env var
+                        BLACKLISTED_ASSET_FILENAME_WORDS. Default to none/empty list.
 ```
 
 ## Development
