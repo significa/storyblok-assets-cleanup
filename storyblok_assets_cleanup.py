@@ -161,6 +161,32 @@ def _main():
     )
 
     parser.add_argument(
+        '--token',
+        type=str,
+        default=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN'),
+        required=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN') is None,
+        help=(
+            'Storyblok personal access token, '
+            'alternatively use the env var STORYBLOK_PERSONAL_ACCESS_TOKEN.'
+        ),
+    )
+    parser.add_argument(
+        '--space-id',
+        type=str,
+        default=getenv('STORYBLOK_SPACE_ID'),
+        required=getenv('STORYBLOK_SPACE_ID') is None,
+        help=(
+            'Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID.'
+        ),
+    )
+    parser.add_argument(
+        '--region',
+        type=str,
+        default=StoryblokClient.DEFAULT_REGION,
+        choices=list(StoryblokClient.REGION_TO_BASE_URLS.keys()),
+        help='Storyblok region (default: EU)'
+    )
+    parser.add_argument(
         '--delete',
         action=argparse.BooleanOptionalAction,
         type=bool,
@@ -172,7 +198,16 @@ def _main():
         action=argparse.BooleanOptionalAction,
         type=bool,
         default=True,
-        help='If we should backup assets (to ./assets_backup/<SPACE_ID>), defaults to true.',
+        help=(
+            'If we should backup assets (to the directory specified in `--backup-directory`), '
+            'defaults to true.'
+        ),
+    )
+    parser.add_argument(
+        '--backup-directory',
+        type=str,
+        default='assets_backup',
+        help='Backup directory, defaults to ./assets_backup.',
     )
     parser.add_argument(
         '--cache',
@@ -184,38 +219,17 @@ def _main():
         ),
     )
     parser.add_argument(
+        '--cache-directory',
+        type=str,
+        default='cache',
+        help='Cache directory, defaults to ./cache.',
+    )
+    parser.add_argument(
         '--continue-download-on-failure',
         action=argparse.BooleanOptionalAction,
         type=bool,
         default=True,
         help='If we should continue if the download of an asset fails. Defaults to true.',
-    )
-
-    parser.add_argument(
-        '--space-id',
-        type=str,
-        default=getenv('STORYBLOK_SPACE_ID'),
-        required=getenv('STORYBLOK_SPACE_ID') is None,
-        help=(
-            'Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID.'
-        ),
-    )
-    parser.add_argument(
-        '--token',
-        type=str,
-        default=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN'),
-        required=getenv('STORYBLOK_PERSONAL_ACCESS_TOKEN') is None,
-        help=(
-            'Storyblok personal access token, '
-            'alternatively use the env var STORYBLOK_PERSONAL_ACCESS_TOKEN.'
-        ),
-    )
-    parser.add_argument(
-        '--region',
-        type=str,
-        default=StoryblokClient.DEFAULT_REGION,
-        choices=list(StoryblokClient.REGION_TO_BASE_URLS.keys()),
-        help='Storyblok region (default: EU)'
     )
     parser.add_argument(
         '--blacklisted-folder-paths',
@@ -237,18 +251,6 @@ def _main():
             'Alternatively use the env var BLACKLISTED_ASSET_FILENAME_WORDS. '
             'Default to none/empty list.'
         ),
-    )
-    parser.add_argument(
-        '--cache-directory',
-        type=str,
-        default='cache',
-        help='Cache directory, defaults to ./cache.',
-    )
-    parser.add_argument(
-        '--backup-directory',
-        type=str,
-        default='assets_backup',
-        help='Backup directory, defaults to ./assets_backup.',
     )
 
     args = parser.parse_args()
