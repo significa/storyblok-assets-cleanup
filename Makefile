@@ -12,8 +12,11 @@ format: ## Format the code according to the standards
 	flake8 --format .
 	isort .
 
-local-install: ## Link the current directory to the user installation
-	pip3 install --force-reinstall --user --editable .
+local-install: ## Link the current directory to current pip environment installation
+	python -m pip install --force-reinstall --editable .
+
+local-user-install: ## Link the current directory to the user installation
+	python3 -m pip install --force-reinstall --user --editable .
 
 install-deps: ## Install python dependencies
 	pip install -r requirements.dev.txt

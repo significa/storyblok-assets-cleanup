@@ -16,9 +16,9 @@ class StoryblokClient:
      this where the global state might affect your application.
     """
 
-    _storyblok_space_id: str
-    _storyblok_personal_access_token: str
-    _storyblok_base_url: str
+    _storyblok_space_id: str | None = None
+    _storyblok_personal_access_token: str | None = None
+    _storyblok_base_url: str | None = None
 
     REGION_TO_BASE_URLS = {
         'eu': 'https://mapi.storyblok.com',
@@ -31,12 +31,16 @@ class StoryblokClient:
     DEFAULT_REGION = 'eu'
 
     @classmethod
-    def init_client(cls, space_id, token, region):
-        if (
+    def is_initialized(cls):
+        return (
             cls._storyblok_space_id
-            or cls._storyblok_personal_access_token
-            or cls._storyblok_base_url
-        ):
+            and cls._storyblok_personal_access_token
+            and cls._storyblok_base_url
+        )
+
+    @classmethod
+    def init_client(cls, space_id, token, region):
+        if cls.is_initialized():
             raise RuntimeError("StoryblokClient already initialized")
 
         cls.storyblok_space_id = space_id
@@ -45,6 +49,9 @@ class StoryblokClient:
 
     @classmethod
     def request(cls, method, path, params=None, **kwargs):
+        if cls.is_initialized():
+            raise RuntimeError("StoryblokClient not initialized")
+
         return requests.request(
             method,
             f'{cls.storyblok_base_url}/v1/spaces/{cls.storyblok_space_id}{path}',
@@ -58,7 +65,7 @@ class StoryblokClient:
 
 def ensure_cache_dir_exists(cache_directory):
     if not path.exists(cache_directory):
-        makedirs(cache_directory)
+        makedirs(cache_directory, exist_ok=True)
 
 
 def load_json(file_path):
@@ -72,29 +79,54 @@ def save_json(file_path, data):
         with open(file_path, 'w') as file:
             return json.dump(data, file, indent=2, ensure_ascii=True)
     except KeyboardInterrupt as e:
-        print("KeyboardInterrupt: Saving file again!")
+        print("KeyboardInterrupt: Saving file again to avoid corruption!")
         save_json(file_path, data)
         raise e
 
 
-def download_asset(asset_url, target_file_path, continue_download_on_failure):
-    print(f'Downloading asset {asset_url!r} into {target_file_path!r}')
+def backup_asset(
+    asset_id,
+    asset_url,
+    space_id,
+    backup_directory,
+    continue_download_on_failure,
+) -> str | None:
+    extension = pathlib.Path(asset_url).suffix
 
-    response = StoryblokClient.request('GET', asset_url, stream=True)
+    directory = path.join(
+        backup_directory,
+        space_id,
+    )
+
+    file_path = path.join(
+        directory,
+        f'{asset_id}{extension}',
+    )
+
+    if path.exists(file_path):
+        print(f'Skipping download of {asset_url!r} as it was already backed-up to {file_path!r}')
+        return file_path
+
+    print(f'Downloading asset {asset_url!r} into {file_path!r}')
+
+    makedirs(directory, exist_ok=True)
+
+    response = requests.get(url=asset_url, stream=True)
 
     if not response.ok:
         msg = f'Cannot download asset {asset_url}, got status code {response.status_code}'
 
         if continue_download_on_failure:
             print(msg)
-            return
+            return None
 
         raise RuntimeError(
-            f'{msg}. --continue-download-on-failure to ignore',
+            f'{msg}. Use --continue-download-on-failure to ignore this error.',
         )
 
-    with open(target_file_path, 'wb') as out_file:
+    with open(file_path, 'wb') as out_file:
         shutil.copyfileobj(response.raw, out_file)
+        return file_path
 
 
 def get_all_paginated(path, item_name, params={}):
@@ -135,6 +167,27 @@ def get_all_paginated(path, item_name, params={}):
         all_items.extend(new_items)
 
     return all_items
+
+
+def print_padded(*args):
+    table_titles = [
+        'Not in use',
+        'To be deleted',
+        'Path',
+    ]
+
+    outputs = args if args else table_titles
+
+    print(
+        " | ".join([
+            (
+                str(output).rjust(len(table_titles[index]), " ")
+                if isinstance(output, int) else
+                str(output).ljust(len(table_titles[index]), " ")
+            )
+            for index, output in enumerate(outputs)
+        ])
+    )
 
 
 def is_asset_in_use(asset):
@@ -232,23 +285,21 @@ def _main():
         help='If we should continue if the download of an asset fails. Defaults to true.',
     )
     parser.add_argument(
-        '--blacklisted-folder-paths',
+        '--blacklisted-path',
         type=str,
-        default=getenv('BLACKLISTED_ASSET_FOLDER_PATHS', ''),
-        help=(
-            'Comma separated list of filepaths that should be ignored. '
-            'Alternatively use the env var BLACKLISTED_ASSET_FOLDER_PATHS. '
-            'Default to none/empty list.'
-        ),
+        action='append',
+        required=False,
+        default=[],
+        help='Filepaths that should be ignored. Optional, defaults to no blacklisted paths.',
     )
     parser.add_argument(
-        '--blacklisted-words',
+        '--blacklisted-word',
         type=str,
-        default=getenv('BLACKLISTED_ASSET_FILENAME_WORDS', ''),
+        action='append',
+        required=False,
+        default=[],
         help=(
-            'Comma separated list of words that should be used to ignore assets when they are '
-            'contained in its filename. '
-            'Alternatively use the env var BLACKLISTED_ASSET_FILENAME_WORDS. '
+            'Will not delete assets which contains the specified words in its filename. '
             'Default to none/empty list.'
         ),
     )
@@ -257,17 +308,24 @@ def _main():
 
     StoryblokClient.init_client(args.space_id, args.token, args.region)
 
-    should_delete_images = args.delete
+    should_delete_assets = args.delete
     use_cache = args.cache
     backup_assets = args.backup
     space_id = args.space_id
     continue_download_on_failure = args.continue_download_on_failure
-    blacklisted_asset_folder_paths = args.blacklisted_folder_paths.split(',')
-    blacklisted_asset_filename_words = args.blacklisted_words.split(',')
+    blacklisted_asset_directory_paths = args.blacklisted_path
+    blacklisted_asset_filename_words = args.blacklisted_word
     cache_directory = args.cache_directory
     backup_directory = args.backup_directory
     assets_cache_path = path.join(cache_directory, f'{space_id}_assets.json')
     asset_folder_cache_path = path.join(cache_directory, f'{space_id}_asset_folders.json')
+
+    for blacklisted_asset_folder_path in blacklisted_asset_directory_paths:
+        if not blacklisted_asset_folder_path.startswith("/"):
+            raise RuntimeError(
+                f"Invalid blacklisted path {blacklisted_asset_folder_path!r}, "
+                "expected a global Storyblok path starting with a slash (ex: /sample/path)."
+            )
 
     ensure_cache_dir_exists(cache_directory)
 
@@ -306,7 +364,7 @@ def _main():
         return f'{parent_path}/{name}'
 
     def should_be_deleted(asset_path_name, filename):
-        if asset_path_name in blacklisted_asset_folder_paths:
+        if asset_path_name in blacklisted_asset_directory_paths:
             print(f'Skipping {id} as it is in {asset_path_name}')
             return False
 
@@ -320,11 +378,12 @@ def _main():
 
     count = 0
     for asset in all_assets:
+        asset['to_be_deleted'] = False
+
         if 'is_in_use' in asset:
             continue
 
         asset['is_in_use'] = is_asset_in_use(asset)
-        asset['to_be_deleted'] = False
 
         count += 1
 
@@ -366,67 +425,48 @@ def _main():
         )
 
     print('\nSummary of files to be deleted')
-    TITLES = [
-        'Not in use',
-        'To be deleted',
-        'Path',
-    ]
 
-    def print_padded(outputs):
-        print(
-            " | ".join([
-                (
-                    str(output).rjust(len(TITLES[index]), " ")
-                    if isinstance(output, int) else
-                    str(output).ljust(len(TITLES[index]), " ")
-                )
-                for index, output in enumerate(outputs)
-            ])
-        )
-
-    print_padded(TITLES)
+    print_padded()
 
     for path_name in sorted(folder_path_names_to_item_counts.keys()):
         not_in_use_count, to_be_deleted_count = folder_path_names_to_item_counts[path_name]
 
-        print_padded([
+        print_padded(
             not_in_use_count,
             to_be_deleted_count,
             path_name,
-        ])
+        )
 
     print()
 
-    if should_delete_images:
-        should_delete_images = input('Do you really want to delete the assets? (y/n): ') == 'y'
+    if should_delete_assets:
+        message = (
+            'Do you really want to delete the assets after performing the backup? (y/n): '
+            if backup_assets
+            else 'Do you really want to delete the assets? (y/n): '
+        )
+        should_delete_assets = input(message) == 'y'
+
     elif backup_assets:
-        input('Images will not be deleted but will perform backup. Press any key to continue: ')
+        input('Assets will not be deleted but will perform backup. Press any key to continue: ')
+
     else:
         input('Dry run mode: nothing will be done. Press any key to continue: ')
 
     for asset in assets_not_in_use:
-        id = asset["id"]
-
         asset_path_name = folder_id_to_path_name[asset['asset_folder_id']]
 
-        extension = pathlib.Path(asset["filename"]).suffix
+        if backup_assets:
+            if file_path := backup_asset(
+                asset_id=asset["id"],
+                asset_url=asset["filename"],
+                space_id=space_id,
+                backup_directory=backup_directory,
+                continue_download_on_failure=continue_download_on_failure,
+            ):
+                asset['backed_up_to'] = file_path
 
-        if backup_assets and asset.get('backed_up_to') is not None:
-            file_path = path.join(
-                backup_directory,
-                space_id,
-                f'{id}{extension}',
-            )
-
-            download_asset(
-                asset["filename"],
-                file_path,
-                continue_download_on_failure,
-            )
-
-            asset['backed_up_to'] = file_path
-
-        if should_delete_images:
+        if should_delete_assets:
             print(f'Deleting asset {id}')
 
             response = StoryblokClient.request(
@@ -438,9 +478,9 @@ def _main():
             asset['is_deleted'] = True
 
         else:
-            print(f'Would delete asset {id!r} if delete mode was on (--delete)')
+            print(f'Did not delete te asset {id!r}. To enable deletion use the --delete flag')
 
-        if backup_assets or should_delete_images:
+        if backup_assets or should_delete_assets:
             save_json(assets_cache_path, all_assets)
 
 

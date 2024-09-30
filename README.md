@@ -35,13 +35,13 @@ Features:
 -->
 
 ```
-usage: storyblok-assets-cleanup [-h] [--token TOKEN] --space-id SPACE_ID
-                                [--region {eu,us,ca,au,cn}] [--delete | --no-delete]
-                                [--backup | --no-backup] [--backup-directory BACKUP_DIRECTORY]
-                                [--cache | --no-cache] [--cache-directory CACHE_DIRECTORY]
-                                [--continue-download-on-failure | --no-continue-download-on-failure]
-                                [--blacklisted-folder-paths BLACKLISTED_FOLDER_PATHS]
-                                [--blacklisted-words BLACKLISTED_WORDS]
+usage: storyblok_assets_cleanup.py [-h] [--token TOKEN] --space-id SPACE_ID
+                                   [--region {eu,us,ca,au,cn}] [--delete | --no-delete]
+                                   [--backup | --no-backup] [--backup-directory BACKUP_DIRECTORY]
+                                   [--cache | --no-cache] [--cache-directory CACHE_DIRECTORY]
+                                   [--continue-download-on-failure | --no-continue-download-on-failure]
+                                   [--blacklisted-path BLACKLISTED_PATH]
+                                   [--blacklisted-word BLACKLISTED_WORD]
 
 storyblok-assets-cleanup an utility to delete unused assets.
 
@@ -64,14 +64,12 @@ options:
                         Cache directory, defaults to ./cache.
   --continue-download-on-failure, --no-continue-download-on-failure
                         If we should continue if the download of an asset fails. Defaults to true.
-  --blacklisted-folder-paths BLACKLISTED_FOLDER_PATHS
-                        Comma separated list of filepaths that should be ignored. Alternatively
-                        use the env var BLACKLISTED_ASSET_FOLDER_PATHS. Default to none/empty
-                        list.
-  --blacklisted-words BLACKLISTED_WORDS
-                        Comma separated list of words that should be used to ignore assets when
-                        they are contained in its filename. Alternatively use the env var
-                        BLACKLISTED_ASSET_FILENAME_WORDS. Default to none/empty list.
+  --blacklisted-path BLACKLISTED_PATH
+                        Filepaths that should be ignored. Optional, defaults to no blacklisted
+                        paths.
+  --blacklisted-word BLACKLISTED_WORD
+                        Will not delete assets which contains the specified words in its filename.
+                        Default to none/empty list.
 ```
 
 ## Development
