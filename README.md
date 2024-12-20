@@ -1,17 +1,19 @@
-# Cleanup Storyblok assets
+[![significa's banner](https://github.com/significa/.github/blob/main/assets/significa-github-banner-small.png)](https://significa.co/)
 
+# Cleanup Storyblok assets
 
 [![PyPI version storyblok-assets-cleanup](https://img.shields.io/pypi/v/storyblok-assets-cleanup.svg)](https://pypi.python.org/pypi/storyblok-assets-cleanup/)
 [![CI/CD](https://github.com/significa/storyblok-assets-cleanup/actions/workflows/ci-cd.yaml/badge.svg)](https://github.com/significa/storyblok-assets-cleanup/actions/workflows/ci-cd.yaml)
 
-storyblok-assets-cleanup is an utility to find and delete unused assets
+**storyblok-assets-cleanup** is a CLI utility to find and delete unused assets
 (images, videos, documents, etc) in the Storyblok CMS.
 
 Features:
 
 - Find assets without references;
-- Output a summary of file to be deleted, grouped by folder;
+- Output a summary of assets to be deleted, grouped by folder;
 - Perform a backup of assets before deletion;
+- Delete the actual assets.
 
 
 ## Getting started
@@ -19,11 +21,13 @@ Features:
 ### Requirements
 
 - Have a Storyblok space and create a
-  [personal access token](https://app.storyblok.com/#/me/account?tab=token)
+[personal access token](https://app.storyblok.com/#/me/account?tab=token)
 
 ### Installation
 
-`pip3 install storyblok-assets-cleanup`
+- `pip3 install storyblok-assets-cleanup`
+
+That's it. Check the package releases on [PyPI](https://pypi.org/project/storyblok-assets-cleanup/).
 
 ## Usage
 
@@ -78,7 +82,11 @@ options:
 - Create a virtual environment: `make setup-venv`.
 - Install dependencies: `make install-deps`.
 
-Then you can install (link) the repo globally with `make local-install`.
+Then you can install (link) the local repository globally with `make local-install`.
 
 Before pushing changes ensure your code is properly formatted with `make lint`.
 Auto format the code with `make format`.
+
+## License 
+
+MIT
