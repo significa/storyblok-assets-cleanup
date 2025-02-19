@@ -365,11 +365,11 @@ def _main():
 
     def should_be_deleted(asset_path_name, filename):
         if asset_path_name in blacklisted_asset_directory_paths:
-            print(f'Skipping {id} as it is in {asset_path_name}')
+            print(f'Skipping {filename!r} as it is in {asset_path_name}')
             return False
 
         if any(word in filename for word in blacklisted_asset_filename_words if word):
-            print(f'Skipping {id} as it contains blacklisted words')
+            print(f'Skipping {filename!r} as it contains blacklisted words')
             return False
 
         return True
@@ -407,8 +407,6 @@ def _main():
     folder_path_names_to_item_counts = {}
 
     for asset in assets_not_in_use:
-        id = asset["id"]
-
         asset_path_name = folder_id_to_path_name[asset['asset_folder_id']]
 
         to_be_deleted = should_be_deleted(asset_path_name, asset["filename"])
@@ -467,18 +465,20 @@ def _main():
                 asset['backed_up_to'] = file_path
 
         if should_delete_assets:
-            print(f'Deleting asset {id}')
+            print(f'Deleting asset {asset["id"]}')
 
             response = StoryblokClient.request(
                 'DELETE',
-                f'/assets/{id}',
+                f'/assets/{asset["id"]}',
             )
             response.raise_for_status()
 
             asset['is_deleted'] = True
 
         else:
-            print(f'Did not delete te asset {id!r}. To enable deletion use the --delete flag')
+            print(
+                f'Did not delete te asset {asset["id"]!r}. To enable deletion use the --delete flag'
+            )
 
         if backup_assets or should_delete_assets:
             save_json(assets_cache_path, all_assets)
