@@ -476,7 +476,9 @@ def _main():
             asset['is_deleted'] = True
 
         else:
-            print(f'Did not delete te asset {asset["id"]!r}. To enable deletion use the --delete flag')
+            print(
+                f'Did not delete te asset {asset["id"]!r}. To enable deletion use the --delete flag'
+            )
 
         if backup_assets or should_delete_assets:
             save_json(assets_cache_path, all_assets)
