@@ -25,9 +25,18 @@ Features:
 
 ### Installation
 
-- `pip3 install storyblok-assets-cleanup`
+In order to keep your system tidy and without conflicts in your global and user packages,
+we recommend [pipx](https://github.com/pypa/pipx):
 
-That's it. Check the package releases on [PyPI](https://pypi.org/project/storyblok-assets-cleanup/).
+```
+pipx install storyblok-assets-cleanup
+```
+
+This should do the trick for all systems.
+Adapt the installation command to fit your and preferred tool.
+
+Use `pipx upgrade storyblok-assets-cleanup` to update to the latest release.
+Check the package releases on [PyPI](https://pypi.org/project/storyblok-assets-cleanup/).
 
 ## Usage
 
