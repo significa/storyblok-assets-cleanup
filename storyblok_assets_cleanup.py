@@ -4,6 +4,7 @@ import argparse
 import json
 import pathlib
 import shutil
+import time
 from os import getenv, makedirs, path
 
 import requests
@@ -43,24 +44,63 @@ class StoryblokClient:
         if cls.is_initialized():
             raise RuntimeError("StoryblokClient already initialized")
 
-        cls.storyblok_space_id = space_id
-        cls.storyblok_personal_access_token = token
-        cls.storyblok_base_url = cls.REGION_TO_BASE_URLS[region]
+        cls._storyblok_space_id = space_id
+        cls._storyblok_personal_access_token = token
+        cls._storyblok_base_url = cls.REGION_TO_BASE_URLS[region]
 
     @classmethod
-    def request(cls, method, path, params=None, **kwargs):
-        if cls.is_initialized():
+    def request(cls, method, path, params=None, max_retries=3, base_delay=1.0, **kwargs):
+        if not cls.is_initialized():
             raise RuntimeError("StoryblokClient not initialized")
 
-        return requests.request(
-            method,
-            f'{cls.storyblok_base_url}/v1/spaces/{cls.storyblok_space_id}{path}',
-            headers={
-                'Authorization': cls.storyblok_personal_access_token,
-            },
-            params=params,
-            **kwargs,
-        )
+        for attempt in range(max_retries + 1):
+            try:
+                # Add a small delay between requests to avoid rate limiting
+                if attempt > 0:
+                    delay = base_delay * (2 ** (attempt - 1))  # Exponential backoff
+                    print(f"Rate limited, waiting {delay:.1f} seconds before retry {attempt}/{max_retries}...")
+                    time.sleep(delay)
+                else:
+                    # Small delay even on first request to be respectful
+                    time.sleep(0.1)
+
+                response = requests.request(
+                    method,
+                    f'{cls._storyblok_base_url}/v1/spaces/{cls._storyblok_space_id}{path}',
+                    headers={
+                        'Authorization': cls._storyblok_personal_access_token,
+                    },
+                    params=params,
+                    **kwargs,
+                )
+
+                # If we get a 429 (rate limited), retry
+                if response.status_code == 429:
+                    if attempt < max_retries:
+                        retry_after = response.headers.get('Retry-After')
+                        if retry_after:
+                            try:
+                                delay = float(retry_after)
+                                print(f"Server requested wait of {delay} seconds")
+                                time.sleep(delay)
+                                continue
+                            except ValueError:
+                                pass
+                        continue
+                    else:
+                        # Last attempt failed, raise the error
+                        response.raise_for_status()
+
+                return response
+
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries:
+                    delay = base_delay * (2 ** attempt)
+                    print(f"Request failed ({e}), retrying in {delay:.1f} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    raise
 
 
 def ensure_cache_dir_exists(cache_directory):
@@ -357,7 +397,8 @@ def _main():
             return f'/{name}'
 
         if folder['parent_id'] not in folder_ids_to_folder:
-            raise RuntimeError(f'Parent asset folder of {folder["id"]} does not exist!')
+            print(f'Warning: Parent folder {folder["parent_id"]} of folder {folder["id"]} ("{name}") does not exist. Treating as root folder.')
+            return f'/{name}'
 
         parent_path = get_folder_path_name(folder['parent_id'])
 
