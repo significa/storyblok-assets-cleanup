@@ -53,8 +53,7 @@ usage: storyblok-assets-cleanup [-h] --token TOKEN --space-id SPACE_ID [--region
                                 [--backup-directory BACKUP_DIRECTORY] [--cache | --no-cache]
                                 [--cache-directory CACHE_DIRECTORY]
                                 [--continue-download-on-failure | --no-continue-download-on-failure]
-                                [--blacklisted-path BLACKLISTED_PATH]
-                                [--blacklisted-word BLACKLISTED_WORD]
+                                [--ignore-path IGNORE_PATH] [--ignore-word IGNORE_WORD]
 
 storyblok-assets-cleanup an utility to delete unused assets.
 
@@ -77,10 +76,14 @@ options:
                         Cache directory, defaults to ./cache.
   --continue-download-on-failure, --no-continue-download-on-failure
                         If we should continue if the download of an asset fails. Defaults to true.
-  --blacklisted-path BLACKLISTED_PATH
-                        Filepaths that should be ignored. Optional, defaults to no blacklisted
-                        paths.
-  --blacklisted-word BLACKLISTED_WORD
+  --ignore-path IGNORE_PATH
+                        Absolute filepaths that should be ignored, can be passed multiple times.
+                        Does not support prefixes, meaning you would need to pass the full path
+                        for each directory, as seen in the summary table (with starting slash and
+                        without trailing slash). Optional, defaults to no blacklisted paths.
+                        Example: --ignore-path '/Do not delete/emails' --ignore-path '/Do not
+                        delete/logos'.
+  --ignore-word IGNORE_WORD
                         Will not delete assets which contains the specified words in its filename.
                         Default to none/empty list.
 ```
