@@ -1,4 +1,4 @@
-[![significa's banner](https://github.com/significa/.github/blob/main/assets/significa-github-banner-small.png)](https://significa.co/)
+[![significa's banner](https://raw.githubusercontent.com/significa/.github/refs/heads/main/assets/significa-github-banner-small.png)](https://significa.co/)
 
 # Cleanup Storyblok assets
 
