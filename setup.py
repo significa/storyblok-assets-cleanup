@@ -10,7 +10,7 @@ requirements = (Path(__file__).parent / "requirements.txt").read_text().split("\
 version = re.sub(
     r"^v",
     "",
-    os.getenv("VERSION", "v0.0.1.dev0")
+    os.getenv("VERSION", "v0.0.1.dev0"),
 )
 
 print(f"Publishing version {version}")
@@ -25,7 +25,7 @@ setup(
     py_modules=["storyblok_assets_cleanup"],
     entry_points={
         "console_scripts": [
-            "storyblok-assets-cleanup = storyblok_assets_cleanup:main"
+            "storyblok-assets-cleanup = storyblok_assets_cleanup:main",
         ],
     },
     license="MIT",

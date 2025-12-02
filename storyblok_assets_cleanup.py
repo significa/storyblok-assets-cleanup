@@ -15,7 +15,7 @@ _REGION_TO_BASE_URLS = {
     "us": "https://api-us.storyblok.com",
     "ca": "https://api-ca.storyblok.com",
     "au": "https://api-ap.storyblok.com",
-    "cn": "https://app.storyblokchina.cn"
+    "cn": "https://app.storyblokchina.cn",
 }
 
 
@@ -60,7 +60,8 @@ class StoryblokClient:
                 if attempt > 0:
                     delay = base_delay * (2 ** (attempt - 1))  # Exponential backoff
                     print(
-                        f"Rate limited, waiting {delay:.1f} seconds before retry {attempt}/{max_retries}...")
+                        f"Rate limited, waiting {delay:.1f} seconds before retry {attempt}/{max_retries}..."
+                    )
                     time.sleep(delay)
                 else:
                     # Small delay even on first request to be respectful
@@ -97,7 +98,7 @@ class StoryblokClient:
 
             except requests.exceptions.RequestException as e:
                 if attempt < max_retries:
-                    delay = base_delay * (2 ** attempt)
+                    delay = base_delay * (2**attempt)
                     print(f"Request failed ({e}), retrying in {delay:.1f} seconds...")
                     time.sleep(delay)
                     continue
@@ -190,11 +191,7 @@ def get_all_paginated(path, item_name, params={}):
             "page": page,
         }
 
-        response = StoryblokClient.request(
-            "GET",
-            path,
-            params=params
-        )
+        response = StoryblokClient.request("GET", path, params=params)
 
         response.raise_for_status()
         response_data = response.json()
@@ -202,8 +199,7 @@ def get_all_paginated(path, item_name, params={}):
         if item_name not in response_data and isinstance(response_data, dict):
             raise KeyError(
                 "item_name {!r} not in response. Possible keys {}".format(
-                    item_name,
-                    ", ".join(response_data.keys())
+                    item_name, ", ".join(response_data.keys())
                 )
             )
 
@@ -226,14 +222,16 @@ def print_padded(*args):
     outputs = args if args else table_titles
 
     print(
-        " | ".join([
-            (
-                str(output).rjust(len(table_titles[index]), " ")
-                if isinstance(output, int) else
-                str(output).ljust(len(table_titles[index]), " ")
-            )
-            for index, output in enumerate(outputs)
-        ])
+        " | ".join(
+            [
+                (
+                    str(output).rjust(len(table_titles[index]), " ")
+                    if isinstance(output, int)
+                    else str(output).ljust(len(table_titles[index]), " ")
+                )
+                for index, output in enumerate(outputs)
+            ]
+        )
     )
 
 
@@ -246,7 +244,7 @@ def is_asset_in_use(asset):
             "reference_search": file_path,
             "per_page": 1,
             "page": 1,
-        }
+        },
     )
 
     response.raise_for_status()
@@ -275,16 +273,14 @@ def _main():  # noqa: C901, PLR0915
         type=str,
         default=getenv("STORYBLOK_SPACE_ID"),
         required=getenv("STORYBLOK_SPACE_ID") is None,
-        help=(
-            "Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID."
-        ),
+        help=("Storyblok space ID, alternatively use the env var STORYBLOK_SPACE_ID."),
     )
     parser.add_argument(
         "--region",
         type=str,
         default=StoryblokClient.DEFAULT_REGION,
         choices=list(_REGION_TO_BASE_URLS.keys()),
-        help="Storyblok region (default: EU)"
+        help="Storyblok region (default: EU)",
     )
     parser.add_argument(
         "--delete",
@@ -311,9 +307,7 @@ def _main():  # noqa: C901, PLR0915
         "--cache",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help=(
-            "If we should use cache the assets index. Defaults to True (recommended)."
-        ),
+        help=("If we should use cache the assets index. Defaults to True (recommended)."),
     )
     parser.add_argument(
         "--cache-directory",
@@ -387,10 +381,7 @@ def _main():  # noqa: C901, PLR0915
         all_folders = get_all_paginated("/asset_folders", item_name="asset_folders")
         save_json(asset_folder_cache_path, all_folders)
 
-    folder_ids_to_folder = {
-        folder["id"]: folder
-        for folder in all_folders
-    }
+    folder_ids_to_folder = {folder["id"]: folder for folder in all_folders}
 
     def get_folder_path_name(folder_id):
         folder = folder_ids_to_folder[folder_id]
@@ -402,7 +393,7 @@ def _main():  # noqa: C901, PLR0915
         if folder["parent_id"] not in folder_ids_to_folder:
             print(
                 f'Warning: Parent folder {folder["parent_id"]} of folder {folder["id"]} ("{name}")'
-                'does not exist. Treating as root folder.'
+                "does not exist. Treating as root folder."
             )
             return f"/{name}"
 
@@ -445,8 +436,7 @@ def _main():  # noqa: C901, PLR0915
     ]
 
     folder_id_to_path_name = {
-        folder["id"]: get_folder_path_name(folder["id"])
-        for folder in all_folders
+        folder["id"]: get_folder_path_name(folder["id"]) for folder in all_folders
     }
 
     folder_id_to_path_name[None] = "/"
@@ -460,13 +450,12 @@ def _main():  # noqa: C901, PLR0915
         asset["to_be_deleted"] = to_be_deleted
 
         not_in_use_count, to_be_deleted_count = folder_path_names_to_item_counts.setdefault(
-            asset_path_name,
-            (0, 0)
+            asset_path_name, (0, 0)
         )
 
         folder_path_names_to_item_counts[asset_path_name] = (
             not_in_use_count + 1,
-            to_be_deleted_count + 1 if to_be_deleted else to_be_deleted_count
+            to_be_deleted_count + 1 if to_be_deleted else to_be_deleted_count,
         )
 
     print("\nSummary of files to be deleted")
@@ -512,11 +501,11 @@ def _main():  # noqa: C901, PLR0915
                 asset["backed_up_to"] = file_path
 
         if should_delete_assets:
-            print(f'Deleting asset {asset["id"]}')
+            print(f"Deleting asset {asset['id']}")
 
             response = StoryblokClient.request(
                 "DELETE",
-                f'/assets/{asset["id"]}',
+                f"/assets/{asset['id']}",
             )
             response.raise_for_status()
 
@@ -524,7 +513,7 @@ def _main():  # noqa: C901, PLR0915
 
         else:
             print(
-                f'Did not delete te asset {asset["id"]!r}. To enable deletion use the --delete flag'
+                f"Did not delete te asset {asset['id']!r}. To enable deletion use the --delete flag"
             )
 
         if backup_assets or should_delete_assets:
