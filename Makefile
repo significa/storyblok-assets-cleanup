@@ -2,24 +2,21 @@ help: ## Show this help
 	@egrep -h '\s##\s' $(MAKEFILE_LIST) | sort | \
 	awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-21s\033[0m %s\n", $$1, $$2}'
 
-lint: ## Ensure code properly formatted
-	pycodestyle .
-	flake8 .
-	isort . --check
+lint: ## Lint the code according to the standards
+	ruff check .
+	ruff format --check .
+	pyright .
 
 format: ## Format the code according to the standards
-	autopep8 --recursive --in-place .
-	flake8 --format .
-	isort .
+	ruff check --fix .
+	ruff format .
 
-local-install: ## Link the current directory to current pip environment installation
-	python -m pip install --force-reinstall --editable .
-
-local-user-install: ## Link the current directory to the user installation
-	python3 -m pip install --force-reinstall --user --editable .
+local-install: ## Install this package with pipx linked to this source code directory
+	pipx install --editable .
 
 install-deps: ## Install python dependencies
-	pip install -r requirements.dev.txt
+	pip install -r requirements-dev.txt
 
 setup-venv: ## Setup a local venv
-	python3 -m venv env
+	python3 -m venv venv
+	echo Don't forget to activate your env. For bash/zsh run `source ./venv/bin/activate` or for fish run `source ./venv/bin/activate.fish`
