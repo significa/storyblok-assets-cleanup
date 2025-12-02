@@ -15,7 +15,7 @@ local-install: ## Install this package with pipx linked to this source code dire
 	pipx install --editable .
 
 install-deps: ## Install python dependencies
-	pip install -r requirements-dev.txt
+	pip install -r requirements.dev.txt
 
 setup-venv: ## Setup a local venv
 	python3 -m venv venv
