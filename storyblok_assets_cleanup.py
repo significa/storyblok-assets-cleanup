@@ -4,6 +4,7 @@ import argparse
 import json
 import pathlib
 import shutil
+import sys
 import time
 from http import HTTPStatus
 from os import getenv, makedirs, path
@@ -58,7 +59,8 @@ class StoryblokClient:
             try:
                 # Add a small delay between requests to avoid rate limiting
                 if attempt > 0:
-                    delay = base_delay * (2 ** (attempt - 1))  # Exponential backoff
+                    # Exponential backoff
+                    delay = base_delay * (2 ** (attempt - 1))
                     print(
                         f"Rate limited, waiting {delay:.1f} seconds before retry {attempt}/{max_retries}..."
                     )
@@ -168,7 +170,7 @@ def backup_asset(
             print(msg)
             return None
 
-        raise RuntimeError(
+        abort(
             f"{msg}. Use --continue-download-on-failure to ignore this error.",
         )
 
@@ -216,7 +218,7 @@ def print_padded(*args):
     table_titles = [
         "Not in use",
         "To be deleted",
-        "Path",
+        "Path (use --ignore-path as is here to skip deletion)",
     ]
 
     outputs = args if args else table_titles
@@ -251,6 +253,11 @@ def is_asset_in_use(asset):
 
     stories = response.json()["stories"]
     return len(stories) != 0
+
+
+def abort(message):
+    print(message)
+    sys.exit(1)
 
 
 def _main():  # noqa: C901, PLR0915
@@ -322,15 +329,24 @@ def _main():  # noqa: C901, PLR0915
         help="If we should continue if the download of an asset fails. Defaults to true.",
     )
     parser.add_argument(
-        "--blacklisted-path",
+        "--ignore-path",
         type=str,
         action="append",
         required=False,
         default=[],
-        help="Filepaths that should be ignored. Optional, defaults to no blacklisted paths.",
+        help=(
+            """
+            Absolute filepaths that should be ignored, can be passed multiple times.
+            Does not support prefixes, meaning you would need to pass the full path
+            for each directory, as seen in the summary table
+            (with starting slash and without trailing slash).
+            Optional, defaults to no blacklisted paths.
+            Example: --ignore-path '/Do not delete/emails' --ignore-path '/Do not delete/logos'.
+            """
+        ),
     )
     parser.add_argument(
-        "--blacklisted-word",
+        "--ignore-word",
         type=str,
         action="append",
         required=False,
@@ -350,18 +366,22 @@ def _main():  # noqa: C901, PLR0915
     backup_assets = args.backup
     space_id = args.space_id
     continue_download_on_failure = args.continue_download_on_failure
-    blacklisted_asset_directory_paths = args.blacklisted_path
-    blacklisted_asset_filename_words = args.blacklisted_word
+    blacklisted_asset_directory_paths = args.ignore_path
+    blacklisted_asset_filename_words = args.ignore_word
     cache_directory = args.cache_directory
     backup_directory = args.backup_directory
     assets_cache_path = path.join(cache_directory, f"{space_id}_assets.json")
     asset_folder_cache_path = path.join(cache_directory, f"{space_id}_asset_folders.json")
 
     for blacklisted_asset_folder_path in blacklisted_asset_directory_paths:
-        if not blacklisted_asset_folder_path.startswith("/"):
-            raise RuntimeError(
+        if not blacklisted_asset_folder_path.startswith(
+            "/"
+        ) or blacklisted_asset_folder_path.endswith("/"):
+            abort(
                 f"Invalid blacklisted path {blacklisted_asset_folder_path!r}, "
-                "expected a global Storyblok path starting with a slash (ex: /sample/path)."
+                "expected a global Storyblok path starting with a slash and without trailing slash "
+                "(ex: /sample/path). "
+                "See --help for more information."
             )
 
     ensure_cache_dir_exists(cache_directory)
@@ -378,7 +398,10 @@ def _main():  # noqa: C901, PLR0915
     if path.exists(asset_folder_cache_path) and use_cache:
         all_folders = load_json(asset_folder_cache_path)
     else:
-        all_folders = get_all_paginated("/asset_folders", item_name="asset_folders")
+        all_folders = get_all_paginated(
+            "/asset_folders",
+            item_name="asset_folders",
+        )
         save_json(asset_folder_cache_path, all_folders)
 
     folder_ids_to_folder = {folder["id"]: folder for folder in all_folders}
