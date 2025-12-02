@@ -48,13 +48,13 @@ Check the package releases on [PyPI](https://pypi.org/project/storyblok-assets-c
 -->
 
 ```
-usage: storyblok_assets_cleanup.py [-h] [--token TOKEN] --space-id SPACE_ID
-                                   [--region {eu,us,ca,au,cn}] [--delete | --no-delete]
-                                   [--backup | --no-backup] [--backup-directory BACKUP_DIRECTORY]
-                                   [--cache | --no-cache] [--cache-directory CACHE_DIRECTORY]
-                                   [--continue-download-on-failure | --no-continue-download-on-failure]
-                                   [--blacklisted-path BLACKLISTED_PATH]
-                                   [--blacklisted-word BLACKLISTED_WORD]
+usage: storyblok-assets-cleanup [-h] --token TOKEN --space-id SPACE_ID [--region {eu,us,ca,au,cn}]
+                                [--delete | --no-delete] [--backup | --no-backup]
+                                [--backup-directory BACKUP_DIRECTORY] [--cache | --no-cache]
+                                [--cache-directory CACHE_DIRECTORY]
+                                [--continue-download-on-failure | --no-continue-download-on-failure]
+                                [--blacklisted-path BLACKLISTED_PATH]
+                                [--blacklisted-word BLACKLISTED_WORD]
 
 storyblok-assets-cleanup an utility to delete unused assets.
 

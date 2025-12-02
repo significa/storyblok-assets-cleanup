@@ -10,7 +10,7 @@ requirements = (Path(__file__).parent / "requirements.txt").read_text().split("\
 version = re.sub(
     r"^v",
     "",
-    os.getenv("VERSION", "v0.0.1-development")
+    os.getenv("VERSION", "v0.0.1.dev0")
 )
 
 print(f"Publishing version {version}")
@@ -22,6 +22,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=requirements,
+    py_modules=["storyblok_assets_cleanup"],
     entry_points={
         "console_scripts": [
             "storyblok-assets-cleanup = storyblok_assets_cleanup:main"
@@ -35,7 +36,6 @@ setup(
         "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
         "Topic :: Utilities",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",

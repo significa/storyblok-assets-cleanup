@@ -289,14 +289,12 @@ def _main():  # noqa: C901, PLR0915
     parser.add_argument(
         "--delete",
         action=argparse.BooleanOptionalAction,
-        type=bool,
         default=False,
         help="If we should delete assets, default to false.",
     )
     parser.add_argument(
         "--backup",
         action=argparse.BooleanOptionalAction,
-        type=bool,
         default=True,
         help=(
             "If we should backup assets (to the directory specified in `--backup-directory`), "
@@ -312,7 +310,6 @@ def _main():  # noqa: C901, PLR0915
     parser.add_argument(
         "--cache",
         action=argparse.BooleanOptionalAction,
-        type=bool,
         default=True,
         help=(
             "If we should use cache the assets index. Defaults to True (recommended)."
@@ -327,7 +324,6 @@ def _main():  # noqa: C901, PLR0915
     parser.add_argument(
         "--continue-download-on-failure",
         action=argparse.BooleanOptionalAction,
-        type=bool,
         default=True,
         help="If we should continue if the download of an asset fails. Defaults to true.",
     )
