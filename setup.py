@@ -18,6 +18,7 @@ print(f"Publishing version {version}")
 setup(
     name="storyblok-assets-cleanup",
     version=version,
+    python_requires=">=3.10",
     description="Utility to clean unused storyblok assets.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -38,8 +39,10 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Utilities",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
     ],
 )
