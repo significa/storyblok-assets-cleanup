@@ -511,7 +511,9 @@ def _main():  # noqa: C901, PLR0915
         input("Dry run mode: nothing will be done. Press any key to continue: ")
 
     for asset in assets_not_in_use:
-        asset_path_name = folder_id_to_path_name[asset["asset_folder_id"]]
+        if not asset["to_be_deleted"]:
+            print(f"Skipping asset {asset['id']} (matched ignore filter)")
+            continue
 
         if backup_assets:
             if file_path := backup_asset(
@@ -536,7 +538,7 @@ def _main():  # noqa: C901, PLR0915
 
         else:
             print(
-                f"Did not delete te asset {asset['id']!r}. To enable deletion use the --delete flag"
+                f"Did not delete the asset {asset['id']!r}. To enable deletion use the --delete flag"
             )
 
         if backup_assets or should_delete_assets:
