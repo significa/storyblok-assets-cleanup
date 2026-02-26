@@ -183,6 +183,8 @@ def get_all_paginated(path, item_name, params={}):
     page = 1
 
     all_items = []
+    total_from_header = None
+    previous_page_ids = None
 
     while page is not None:
         print(f"Getting {path}, page={page}")
@@ -198,6 +200,14 @@ def get_all_paginated(path, item_name, params={}):
         response.raise_for_status()
         response_data = response.json()
 
+        if total_from_header is None:
+            total_raw = response.headers.get("total")
+            if total_raw is not None:
+                try:
+                    total_from_header = int(total_raw)
+                except (ValueError, TypeError):
+                    pass
+
         if item_name not in response_data and isinstance(response_data, dict):
             raise KeyError(
                 "item_name {!r} not in response. Possible keys {}".format(
@@ -207,9 +217,21 @@ def get_all_paginated(path, item_name, params={}):
 
         new_items = response_data[item_name]
 
-        page = None if len(new_items) < int(params["per_page"]) else page + 1
-
+        # Detect duplicate page (API returns same page for every request, e.g. /asset_folders).
+        if page > 1 and previous_page_ids is not None:
+            current_ids = {item.get("id") for item in new_items if item.get("id") is not None}
+            if current_ids and current_ids == previous_page_ids:
+                page = None
+                break
         all_items.extend(new_items)
+        previous_page_ids = {item.get("id") for item in new_items if item.get("id") is not None}
+
+        if total_from_header is not None and len(all_items) >= total_from_header:
+            page = None
+        elif len(new_items) < int(params["per_page"]):
+            page = None
+        else:
+            page = page + 1
 
     return all_items
 
